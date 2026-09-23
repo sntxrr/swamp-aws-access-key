@@ -102,6 +102,10 @@ function ctx(
   const logs: string[] = [];
   const written: Array<{ spec: string; name: string; data: unknown }> = [];
   const redacted: string[] = [];
+  // swamp rejects two outputs with one instance name in a single method
+  // execution, across specs. Enforce it here; withIam() marks each execution.
+  const seen = new Set<string>();
+  currentSeen = seen;
   const log = (m: string, p?: Record<string, unknown>) =>
     logs.push(m + " " + JSON.stringify(p ?? {}));
   return {
@@ -116,6 +120,10 @@ function ctx(
       logger: { info: log, warn: log },
       // deno-lint-ignore require-await
       writeResource: async (spec: string, name: string, data: unknown) => {
+        if (seen.has(name)) {
+          throw new Error(`Duplicate data instance name '${name}'`);
+        }
+        seen.add(name);
         written.push({ spec, name, data: structuredClone(data) });
         return { name };
       },
@@ -131,10 +139,14 @@ function ctx(
     logs,
     written,
     redacted,
+    seen,
   };
 }
 
+let currentSeen: Set<string> | undefined;
+
 function withIam<T>(iam: IamLike, fn: () => Promise<T>): Promise<T> {
+  currentSeen?.clear();
   const orig = _internal.iamClient;
   _internal.iamClient = () => iam;
   return fn().finally(() => {
@@ -214,7 +226,7 @@ Deno.test("create: delivers both halves and verifies them", async () => {
   assertEquals(store.get("secrets:example-state/access-key-id"), NEW_ID);
   assertEquals(store.get("secrets:example-state/secret-access-key"), SECRET);
   assertEquals(redacted, [SECRET]);
-  assertEquals(written.map((w) => w.name), [NEW_ID, "current", "current"]);
+  assertEquals(written.map((w) => w.name), [NEW_ID, "current", "summary"]);
   assertEquals(written[2].spec, "inventory");
   const r = written[0].data as Record<string, unknown>;
   assertEquals(r.secretFingerprint, await fingerprint(SECRET));
