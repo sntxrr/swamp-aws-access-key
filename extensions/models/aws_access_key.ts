@@ -378,14 +378,22 @@ async function writeKey(
   return await context.writeResource("key", r.accessKeyId, r);
 }
 
-/** Refresh `inventory/current` from a fresh listing. */
+/**
+ * Instance name for the inventory snapshot. NOT `current`: `create` also writes
+ * `key/current`, and swamp rejects two outputs with one instance name in a
+ * single method execution, even across specs. The key is already minted and
+ * delivered by then, so the run fails after the irreversible step.
+ */
+export const INVENTORY_INSTANCE = "summary";
+
+/** Refresh `inventory/summary` from a fresh listing. */
 async function writeInventory(
   context: ExecuteContext,
   userName: string,
   keys: ListedKey[],
   now: Date,
 ): Promise<{ name: string }> {
-  return await context.writeResource("inventory", "current", {
+  return await context.writeResource("inventory", INVENTORY_INSTANCE, {
     userName,
     keyCount: keys.length,
     activeCount: keys.filter((k) => k.status === "Active").length,
@@ -408,7 +416,15 @@ export const model = {
   type: "@sntxrr/aws-access-key",
   description:
     "Mint, inventory, deactivate and delete AWS IAM access keys, delivering a new key straight into a named vault item",
-  version: "2026.09.23.1",
+  version: "2026.09.23.2",
+  upgrades: [
+    {
+      toVersion: "2026.09.23.2",
+      description:
+        "The inventory snapshot moves from instance `current` to `summary`; `create` failed after delivering the key because `key/current` and `inventory/current` collided. No globalArguments change.",
+      upgradeAttributes: (old: Record<string, unknown>) => old,
+    },
+  ],
   globalArguments: GlobalArgsSchema,
   resources: {
     "key": {
