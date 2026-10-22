@@ -1,0 +1,82 @@
+{
+  "extension": "@sntxrr/aws-access-key",
+  "version": "2026.10.22.1",
+  "reviewedAt": "2026-10-22T16:29:32Z",
+  "dimensions": [
+    {
+      "id": "credentials-secrets",
+      "verdict": "issue",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). The four credentials-sensitive-field findings (accessKeyIdFingerprint, secretFingerprint, deliveredTo.accessKeyIdKey, deliveredTo.secretAccessKeyKey) are now accepted inline with reasons, as the 2026.09.23.2 review already concluded: two 12-hex SHA-256 prefixes and two vault key paths, none of them secret material. The prior ISSUE is carried unchanged and not re-tested: delivery depends on context.vaultService.put/get, which is undocumented for extensions; create's preflight fails closed if it disappears."
+    },
+    {
+      "id": "logging-quality",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. Every method logs entry and completion with structured placeholders. Rollback logs at warn; a failed rollback logs a ROLLBACK FAILED line naming the orphaned key id. No secret in any log line (tested)."
+    },
+    {
+      "id": "error-handling",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. All preflight (target set, vault registered, slot available) throws before any mutating AWS call. Delivery failure and read-back mismatch roll the new key back before rethrowing with vault, item and cause. Rollback's catch is narrowed to NoSuchEntityException; anything else is surfaced. deactivate and delete read state back and throw if AWS returned 200 without effect."
+    },
+    {
+      "id": "testing-completeness",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. 15 unit tests with an injected fake IAM client and fake vault, no network permission: preflight ordering (zero AWS calls when vault missing), slot cap, happy-path delivery and fingerprints, secret absent from resources and logs, rollback on failed put and on read-back mismatch, delete refusing an Active key, deactivate->delete, delete of an unknown key, record carry-forward, inventory refresh, and the valid-target check. The fake writeResource now enforces swamp's per-execution instance-name uniqueness."
+    },
+    {
+      "id": "idempotency-resilience",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. create is inherently non-idempotent (each call mints a new secret); re-running is guarded by the one-key refusal unless allowSecond, and the AWS two-key cap is enforced before calling AWS. Interruption after mint and before delivery is handled by rollback; if rollback itself fails the orphaned id is logged. delete of an already-gone key is a no-op."
+    },
+    {
+      "id": "api-contracts",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. ListAccessKeys paginates on IsTruncated/Marker. CreateAccessKey response is checked for both halves before use. GetAccessKeyLastUsed's 'N/A' sentinel is normalised to null. SDK default retry handles throttling."
+    },
+    {
+      "id": "resource-management",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. No file handles or temp files. Every created key is tracked by id in the key resource and the inventory; a key that cannot be delivered is deleted."
+    },
+    {
+      "id": "published-surface-hygiene",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. README and tests use fictional names (heron-state, example-state) and AWS's documented example key id/secret. No account ids, hostnames, IPs or real vault names."
+    },
+    {
+      "id": "schema-strictness",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. All schemas are plain z.object without passthrough; ids and item names are regex-constrained."
+    },
+    {
+      "id": "lifetime-gc",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. key and inventory: lifetime infinite, garbageCollection 30."
+    },
+    {
+      "id": "crud-completeness",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. create, list (sync equivalent), deactivate (the only mutable attribute is status) and delete."
+    },
+    {
+      "id": "preflight-checks",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. valid-target check (policy label): targetVault/targetItem travel together and the item is a plain name. create additionally preflights vault registration and slot count before minting."
+    },
+    {
+      "id": "instance-names",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. 2026.09.23.1 shipped a collision this dimension exists to catch: create wrote key/current AND inventory/current in one execution, which swamp rejects ('Duplicate data instance name'), failing the run AFTER the key was minted and delivered. The previous review marked this pass without enumerating instance names across specs. Fixed: inventory instance is now 'summary'. The test fake now enforces per-execution instance-name uniqueness; negative control with the old name fails 3 tests with the production error."
+    },
+    {
+      "id": "data-access",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Carried from the 2026.09.23.2 review; code for this dimension unchanged since (git log), and not re-reviewed in this delta. Prior state is read with context.readResource, not the data repository."
+    },
+    {
+      "id": "version-upgrades",
+      "verdict": "pass",
+      "note": "Delta review for 2026.10.22.1 (hygiene cards #435/#436). Model version unchanged; the existing upgrades chain already ends at 2026.09.23.2. Verified: push --dry-run with the manifest bumped reports no versionBumpUpgrade warning."
+    }
+  ]
+}

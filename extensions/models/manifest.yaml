@@ -1,7 +1,7 @@
 manifestVersion: 1
 
 name: "@sntxrr/aws-access-key"
-version: "2026.10.14.1"
+version: "2026.10.22.1"
 description: "Mint, inventory, deactivate and delete AWS IAM access keys — the step @swamp/aws/iam cannot model — delivering a new key straight into a named vault item, verified by read-back and rolled back if delivery fails"
 license: MIT
 repository: "https://github.com/sntxrr/swamp-aws-access-key"
