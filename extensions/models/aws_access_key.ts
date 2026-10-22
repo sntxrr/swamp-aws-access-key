@@ -127,15 +127,19 @@ export const KeySchema = z.object({
   lastUsedAt: z.string().nullable(),
   lastUsedService: z.string().nullable(),
   lastUsedRegion: z.string().nullable(),
+  // swamp-quality-ignore credentials-sensitive-field: first 12 hex of SHA-256 over the public key id; a comparison handle, not a credential
   accessKeyIdFingerprint: z.string().describe(
     "First 12 hex of SHA-256 over the access key id.",
   ),
+  // swamp-quality-ignore credentials-sensitive-field: first 12 hex (48 bits) of SHA-256 over a 40-char random secret; cannot be inverted or brute-forced, it only proves which secret is stored
   secretFingerprint: z.string().nullable().describe(
     "First 12 hex of SHA-256 over the secret; only known to the create run that minted it.",
   ),
   deliveredTo: z.object({
     vault: z.string(),
+    // swamp-quality-ignore credentials-sensitive-field: a vault key path (item/field) where create wrote the id, not a value
     accessKeyIdKey: z.string(),
+    // swamp-quality-ignore credentials-sensitive-field: a vault key path (item/field) where create wrote the secret, not the secret
     secretAccessKeyKey: z.string(),
   }).nullable().describe(
     "Where create wrote the key. Vault addresses only, never a value.",
